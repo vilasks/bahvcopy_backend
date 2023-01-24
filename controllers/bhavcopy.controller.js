@@ -14,7 +14,6 @@ exports.getTodaysData = async(date) => {
         console.log(parts)
         console.log(full_data)
         let url = `https://www1.nseindia.com/content/historical/EQUITIES/${parts[2]}/${parts[1]}/cm${full_data}bhav.csv.zip`
-        console.log(url)
         let checker = await new Promise((resolve,rejects)=>{
             https.get(url,{
                 headers:{
@@ -37,7 +36,6 @@ exports.getTodaysData = async(date) => {
                 })
             })
         })
-        console.log(checker)
         let bhav_path = "./bhav/"
         if(!checker){
             return
@@ -58,14 +56,14 @@ exports.getTodaysData = async(date) => {
             })
             .on("end",()=>{
                 console.log("read end")
-                // setTimeout(()=>{
-                //     fs.rm(bhav_path,(err)=>{
-                //         if(err){
-                //             console.log("err while removing")
-                //         }
-                //         console.log("removed successfully")
-                //     })
-                // },1000)
+                setTimeout(()=>{
+                    fs.rm(bhav_path,(err)=>{
+                        if(err){
+                            console.log("err while removing")
+                        }
+                        console.log("removed successfully")
+                    })
+                },10000)
             })
     }catch(err){
         console.log(err)
@@ -146,9 +144,9 @@ exports.getData = async(req,res) => {
             return res.status(400).send({status:ResCode.failure,msg:"symbol does not exsist"})
         }
 
-        let intervel = 360
+        let intervel = parseInt(req.query.i) || 30
         console.log(new Date(Date.now()-(86400000*intervel)))
-        let resp = await db.collection(req.params.symbol.toUpperCase()).aggregate([
+        let resp = await db.collection(req.params.symbol).aggregate([
             {$match:{"TIMESTAMP":{$gte: new Date(Date.now()-(86400000*intervel))}}},
             {$sort:{TIMESTAMP:1}}
         ]).toArray()
