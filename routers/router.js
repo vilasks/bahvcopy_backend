@@ -7,5 +7,6 @@ router.get("/",(req,res)=>{
 
 router.get("/get-symbols",Bhav.getAllSymbols)
 router.get("/get-data/:symbol",Bhav.getData)
+router.get("/bites",Bhav.Bites)
 
 module.exports = router
