@@ -310,7 +310,7 @@ exports.getHighlights = async(date)=>{
                     "TOP_25_SEC": Top_25_sec,
                     "TOP_5_GAINERS": Top_5_gainers,
                     "TOP_5_LOSERS": Top_5_losers,
-                    "TIMEFRAME": new Date()
+                    "TIMEFRAME": new Date().toDateString()
                 }
 
                 this.InsertHighlights(final_data)
@@ -343,5 +343,17 @@ exports.InsertHighlights = async(data)=>{
     }catch(err){
         console.log(err)
         return {status:ResCode.failure,msg:"Something Went Wrong at server"}
+    }
+}
+
+exports.GetHighlights = async(req,res)=>{
+    try{
+        let highLight = await db.collection("highlights").findOne({"TIMEFRAME":new Date().toDateString()})
+
+        return res.status(200).send({status:"00",success:"true",data:highLight})
+
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({status:ResCode.failure,msg:"something went wrong at server"})
     }
 }

@@ -58,7 +58,6 @@ const job = new cron("00 00 18 * * *",async function(){
         highLightsDate = highLightsDate[0]+highLightsDate[1]+highLightsYear
         getHighlights(highLightsDate)
     }
-    
     console.log("called")
 })
 
