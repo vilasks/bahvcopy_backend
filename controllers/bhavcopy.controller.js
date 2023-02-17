@@ -350,6 +350,11 @@ exports.GetHighlights = async(req,res)=>{
     try{
         let highLight = await db.collection("highlights").findOne({"TIMEFRAME":new Date().toDateString()})
 
+
+        if(!highLight){
+            highLight = await db.collection("highlights").findOne({"TIMEFRAME":new Date(new Date().setDate(new Date().getDate()-1)).toDateString()})
+        }
+
         return res.status(200).send({status:"00",success:"true",data:highLight})
 
     }catch(err){
