@@ -244,7 +244,7 @@ exports.getHighlights = async(date)=>{
         }
 
         let date_helper = new Date().toDateString().split(" ")
-        date_helper = [parseInt(date_helper[2]),date_helper[1],date_helper[3]].join("-")
+        date_helper = [date_helper[2],date_helper[1],date_helper[3]].join("-")
         let i=0;
 
         let Indexs = []
