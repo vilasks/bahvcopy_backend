@@ -23,4 +23,6 @@ const mailOptions = {
 //   }
 // });
 
-export default transporter
+module.exports = {
+  transporter
+}

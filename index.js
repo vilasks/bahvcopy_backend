@@ -10,6 +10,8 @@ const {getTodaysData,getHighlights} = require("./controllers/bhavcopy.controller
 const routes = require("./routers/router")
 const nse = require("nse_holidays")
 const cron = require("cron").CronJob;
+const sendActivityMail = require("./controllers/market_activity_letter")
+require("./controllers/price_emitters")
 
 // app.get("/",(req,res)=>{
 //     const date = new Date()
@@ -26,7 +28,7 @@ const cron = require("cron").CronJob;
 //     })
 //     res.send("Completed")
 // })
-
+app.use(express.json())
 app.use(cors())
 app.use("/",routes)
 // setTimeout(async()=>{
@@ -46,7 +48,7 @@ app.use("/",routes)
 //     await getTodaysData("10-JAN-2023")
 // },3000)
 
-const job = new cron("00 00 18 * * *",async function(){
+const job = new cron("50 11 23 * * *",async function(){
     if(!await nse.isTodayHoliday()){
         console.log("inside holiday")
         let date = new Date()
@@ -59,6 +61,11 @@ const job = new cron("00 00 18 * * *",async function(){
         getHighlights(highLightsDate)
     }
     console.log("called")
+})
+
+const mailJob = new cron("00 05 22 * * *", function(){
+    console.log("called mailer")
+    sendActivityMail.main()
 })
 
 // setTimeout(async()=>{
@@ -75,4 +82,5 @@ app.listen(process.env.PORT,(err)=>{
     }
     console.log(`Started listening on port ${process.env.PORT}`)
     job.start()
+    mailJob.start()
 })

@@ -9,4 +9,5 @@ router.get("/get-symbols",Bhav.getAllSymbols)
 router.get("/get-data/:symbol",Bhav.getData)
 router.get("/bites",Bhav.Bites)
 router.get("/highlights",Bhav.GetHighlights)
+router.post("/create_notification",Bhav.CreatePriceAlert)
 module.exports = router

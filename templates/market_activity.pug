@@ -1,0 +1,117 @@
+
+//- html
+//-     head 
+        
+//-     body
+//-         div(style={'background-color': 'antiquewhite',display: 'flex','align-items': 'center','justify-content': 'center','flex-direction': 'column'})
+//-             div.header
+//-                 h1(style={color:'blue'}) Today's Market Activity
+//-                 p(style={color: 'grey','font-size': 'smaller'}) #{new Date().toDateString()}
+//-             div(style={width:'100%','background-color':'#cf9876'})
+
+//-                 h1(style={'text-align':'center',color:'blue'}) Top 5 Gainers
+//-                 div(style={display:'flex','flex-direction':'row',gap:'10px'})
+//-                     each stock in top_gainers
+//-                         div(style={display:'flex','flex-direction':'row',gap:'10px'})
+//-                             p #{stock.SYMBOL}
+//-                             p
+//-                                 if stock.CHANGE > 0
+//-                                     span(style={color:'green'}) #{stock.CHANGE}%
+//-                                 else
+//-                                     span(style={color:'red'}) #{stock.CHANGE}%
+//-                 h1(style={'text-align':'center',color:'blue'}) Top 5 Losers
+//-                 div(style={display:'flex','flex-direction':'row',gap:'10px',})
+//-                     each stock in top_losers
+//-                         div(style={display:'flex','flex-direction':'row',gap:'10px'})
+//-                             p.stock-label #{stock.SYMBOL}
+//-                             p.change
+//-                                 if stock.CHANGE > 0
+//-                                     span(style={color: 'green'}) #{stock.CHANGE}%
+//-                                 else
+//-                                     span(style={color: 'red'}) #{stock.CHANGE}%
+
+//-                 h1(style={'text-align':'center',color:'blue'}) Index Performance
+//-                 div(style={display:'flex','flex-direction':'row',gap:'10px'})
+//-                     each val in index_data
+//-                         div(style={display:'flex','flex-direction':'row',gap:'10px'})
+//-                             p.stock-label #{val.SYMBOL}
+//-                             p.change
+//-                                 if val.CHANGE > 0
+//-                                     span(style={color: 'green'}) #{val.CHANGE}%
+//-                                 else
+//-                                     span(style={color: 'red'}) #{val.CHANGE}%
+//-             div(style={display:'flex','flex-direction':'row', width:'100%','justify-content':'space-around',padding:'2%','text-decoration':'none'})
+//-                 div(style={color:'black'})
+//-                     a(href="https://google.com" style={'text-decoration':'none'}) About
+//-                 div
+//-                     a(href="https://youtube.com" style={'text-decoration':'none'}) Home
+//-                 div
+//-                     a(href="https://google.com" style={'text-decoration':'none'}) User Guide
+
+
+
+
+
+html
+    head 
+        
+    body
+        table(style={width:'100%',border:'1px solid black'})
+            tbody
+                tr 
+                    td(colspan="2",style={'font-size': 'x-large','font-weight': 'bold','text-align': 'center',}) Today's Market Activity Report
+                
+                tr 
+                    td(colspan="2",style={'text-align':'center'})
+                        sub #{new Date().toISOString()}
+                
+                tr 
+                    td &nbsp;
+                
+                tr 
+                    td(colspan="2" style={'font-size': 'large', 'font-weight': 'bold', 'text-align': 'center'}) Top 5 Gainers
+                
+                tr 
+                    td &nbsp;
+
+                each stock in top_gainers
+                    tr
+                        td(style={'text-align':'center','border':'1px solid black'}) #{stock.SYMBOL}
+                        if stock.CHANGE > 0
+                            td(style={'text-align':'center','border':'1px solid black','color':'green'}) #{stock.CHANGE}
+                        else
+                            td(style={'text-align':'center','border':'1px solid black','color':'red'}) #{stock.CHANGE}  
+                tr 
+                    td &nbsp;   
+                
+                tr 
+                    td(colspan="2" style={'font-size': 'large', 'font-weight': 'bold', 'text-align': 'center'}) Top 5 Losers
+                
+                tr 
+                    td &nbsp;    
+
+                each stock in top_losers     
+                    tr
+                        td(style={'text-align':'center','border':'1px solid black'}) #{stock.SYMBOL}
+                        if stock.CHANGE > 0
+                            td(style={'text-align':'center','border':'1px solid black','color':'green'}) #{stock.CHANGE}
+                        else
+                            td(style={'text-align':'center','border':'1px solid black','color':'red'}) #{stock.CHANGE}
+                tr 
+                    td &nbsp;   
+                tr 
+                    td(colspan="2" style={'font-size': 'large', 'font-weight': 'bold', 'text-align': 'center'}) Index Performance
+                
+                tr 
+                    td &nbsp;    
+                
+                each index in index_data
+                    tr
+                        td(style={'text-align':'center','border':'1px solid black'}) #{index.SYMBOL}
+                        if index.CHANGE > 0
+                            td(style={'text-align':'center','border':'1px solid black','color':'green'}) #{index.CHANGE}
+                        else
+                            td(style={'text-align':'center','border':'1px solid black','color':'red'}) #{index.CHANGE}
+
+
+

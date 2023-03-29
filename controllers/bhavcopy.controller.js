@@ -5,7 +5,7 @@ const csv = require("csv-parser")
 const client = require("../db/connection")
 const db = client.db("bhav")
 const {ResCode} = require("../models/response.codes")
-
+const {priceNotifier} = require("./price_emitters")
 const bitesFrame = [
     {label:"52Weeks",timeFrame:86400000*365},
     {label:"4Weeks",timeFrame:86400000*30},
@@ -348,11 +348,13 @@ exports.InsertHighlights = async(data)=>{
 
 exports.GetHighlights = async(req,res)=>{
     try{
-        let highLight = await db.collection("highlights").findOne({"TIMEFRAME":new Date().toDateString()})
+        let date = new Date()
+        let highLight = null
 
-
-        if(!highLight){
-            highLight = await db.collection("highlights").findOne({"TIMEFRAME":new Date(new Date().setDate(new Date().getDate()-1)).toDateString()})
+        while(!highLight){
+            let date_string = date.toDateString()
+            highLight = await db.collection("highlights").findOne({"TIMEFRAME": date_string})
+            date.setDate(date.getDate()-1)
         }
 
         return res.status(200).send({status:ResCode.success,success:"true",data:highLight})
@@ -360,5 +362,45 @@ exports.GetHighlights = async(req,res)=>{
     }catch(err){
         console.log(err)
         return res.status(500).send({status:ResCode.failure,msg:"something went wrong at server"})
+    }
+}
+
+exports.CreatePriceAlert = async(req,res)=>{
+    try{
+        let latest_price = null
+        let date = new Date(new Date().toDateString())
+        while(!latest_price){
+            let date_string = date
+            latest_price = await db.collection(req.body.symbol).findOne({"TIMESTAMP": date_string})
+            date.setDate(date.getDate()-1)
+        }
+        
+        if(latest_price.CLOSE>=Number(req.body.price) && req.body.type=="EQOAB"){
+            return res.status(400).send({status:ResCode.failure,msg:"price has to greater than current stock price"})
+        }
+
+        if(latest_price.CLOSE<=Number(req.body.price) && req.body.type=="EQOBL"){
+            return res.status(400).send({status:ResCode.failure,msg:"price has to Lower than current stock price"})
+        }
+
+        let data = {
+            PRICE: Number(Number(req.body.price).toFixed(1)),
+            SYMBOL: req.body.symbol,
+            TYPE: req.body.type,
+            TIMESTAMP: new Date().toDateString(),
+            COMPLETED: false
+        }
+
+        await db.collection("PriceAlerts").insertOne(data)
+
+        priceNotifier.startListen(data.SYMBOL,data.PRICE.toString(),()=>{
+            console.log("triggered")
+        })
+
+        return res.status(200).send({status:ResCode.success,msg:"Alert set successfully. You'll receive a email when price your target price"})
+
+    }catch(err){
+        console.log(err)
+        return {status:ResCode.failure,msg:"Something Went Wrong at server"}
     }
 }
