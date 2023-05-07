@@ -2,7 +2,7 @@
 const {EventEmitter} = require("node:events")
 const client = require("../db/connection")
 const db = client.db("bhav")
-
+const {PriceAlertQueue} = require("./price_notification")
 let instance = null;
 class PriceEmitters{
     emitters = {}
@@ -32,9 +32,13 @@ class PriceEmitters{
     startEmitting(symbol,price,last_price){
         let higher = null
         let lower = null
-        
+        if(symbol=="TCS"){
+            console.log(symbol)
+            console.log(this.emitters[symbol])
+        }
         if(!this.emitters[symbol]){
-            throw new Error("symbol does not exsist")
+            return
+            // throw new Error("symbol does not exsist")
         }
 
         price = this.convertToNum(price)
@@ -53,8 +57,11 @@ class PriceEmitters{
         }
 
         while(higher>=lower){
-            this.emitters[symbol].emit(lower.toFixed(2))
-            lower+=0.5
+            if(symbol=="TCS"){
+                console.log(lower.toFixed(process.env.PRICE_PRECISION))
+            }
+            this.emitters[symbol].emit(lower.toFixed(process.env.PRICE_PRECISION))
+            lower+=0.1
         }
     }
 
@@ -68,14 +75,14 @@ class PriceEmitters{
     }
 
     convertToNum(num){
-        return Number(Number(num).toFixed())
+        return Number(Number(num).toFixed(process.env.PRICE_PRECISION))
     }
 
     async #intializeListeners(){
         let collection = await db.collection("PriceAlerts").find({COMPLETED:false}).toArray()
         collection.forEach((ele)=>{
-            this.startListen(ele.SYMBOL,ele.PRICE,()=>{
-                console.log('called in intialize listeners')
+            this.startListen(ele.SYMBOL,ele.PRICE.toFixed(process.env.PRICE_PRECISION),()=>{
+                PriceAlertQueue.push(ele._id.toString())
             })
         })
     }

@@ -5,18 +5,15 @@ const pug = require("pug")
 const Async = require("async")
 let mailQueue = Async.queue(SendMail,10)
 
-
 const mailOptions = {
   from: 'experimental.vilas@gmail.com',
   to: 'vvilas122@gmail.com',
   subject: `${new Date().toDateString()} Market Report`,
 };
 
-async function SendMail(data){
+async function SendMail(to){
 
     let Highlights = await db.collection("highlights").find({},{sort:{_id:-1}}).toArray()
-    console.log(`####### db data`)
-    console.log(Highlights[0])
 
     Highlights = Highlights[0]
 
@@ -50,7 +47,7 @@ async function SendMail(data){
     console.log(html)
 
     mailOptions.html = html
-
+    mailOptions.to = to
     transporter.sendMail(mailOptions,(error,info)=>{
         if(error){
             console.log(error)
@@ -59,8 +56,11 @@ async function SendMail(data){
     })
 }
 
-function main(){
-    mailQueue.push("")
+async function main(){
+    let users = await db.collection("USERS").find({MARKET_ACTIVITY_MAIL: true}).toArray()
+    users.forEach((user)=>{
+        mailQueue.push(user.EMAIL)
+    })
 }
 
 

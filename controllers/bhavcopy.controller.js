@@ -6,20 +6,41 @@ const client = require("../db/connection")
 const db = client.db("bhav")
 const {ResCode} = require("../models/response.codes")
 const {priceNotifier} = require("./price_emitters")
+const { PriceAlertQueue} = require("./price_notification")
+const { ObjectId } = require("mongodb")
+const puppeteer = require("./pupeteer.controller")
+const {transporter} = require("../mailer/mailer")
+
 const bitesFrame = [
     {label:"52Weeks",timeFrame:86400000*365},
     {label:"4Weeks",timeFrame:86400000*30},
     {label:"1Week",timeFrame:86400000*7}
 ]
+exports.hasSymbol = async(symbol) => {
+    try{
+        let data = (await db.collections()).map((e)=>{
+            return e.namespace.split(".")[1]
+        }).filter((e)=>{
+            return e == symbol
+        })
 
-exports.getTodaysData = async(date) => {
+        if(data.length<=0){
+            return false
+        }
+        return true
+    }catch(err){
+        console.log(err)
+        return false;
+    }
+}
+
+exports.getTodaysData = async(date,tries=0) => {
     try{
         const file = fs.createWriteStream("./bhav.zip")
         let parts = date.split("-")
         let full_data = date.split("-").join("")
-        console.log(parts)
-        console.log(full_data)
-        let url = `https://www1.nseindia.com/content/historical/EQUITIES/${parts[2]}/${parts[1]}/cm${full_data}bhav.csv.zip`
+        // https://archives.nseindia.com/content/historical/EQUITIES/2023/APR/cm12APR2023bhav.csv.zip
+        let url = `https://archives.nseindia.com/content/historical/EQUITIES/${parts[2]}/${parts[1]}/cm${full_data}bhav.csv.zip`
         let checker = await new Promise((resolve,rejects)=>{
             https.get(url,{
                 headers:{
@@ -44,6 +65,21 @@ exports.getTodaysData = async(date) => {
         })
         let bhav_path = "./bhav/"
         if(!checker){
+            if(tries == Number(process.env.MAX_RETRIES)){
+                // send mail to admin here
+                await transporter.sendMail(
+                    {
+                        to: process.env.ADMIN_MAIL,
+                        from: "experimental.vilas@gmail.com",
+                        text: "unable to insert todays data "+ new Date().toString(),
+                        subject: "Unable to Scrape Data getTodaysData" 
+                    }
+                )
+            }
+            if(tries < Number(process.env.MAX_RETRIES)){
+                await puppeteer.main(url)
+                this.getTodaysData(date,tries += 1)
+            }
             return
         }
         await decompress("./bhav.zip","bhav").then((files)=>{
@@ -72,13 +108,25 @@ exports.getTodaysData = async(date) => {
                 },10000)
             })
     }catch(err){
+        await transporter.sendMail(
+                {
+                    to: process.env.ADMIN_MAIL,
+                    from: "experimental.vilas@gmail.com",
+                    text: `Error inside getTodaysData ${JSON.stringify(err)} ${new Date().toString()}`,
+                    subject: "error inside getTodayaData" 
+                }
+            ).catch((err)=>{
+                console.log(err)
+            })
         console.log(err)
         // return res.status(500).send({status:ResCode.failure,message:"Something went wrong"})
     }
 }
 
 exports.insertIntoDb = async(data) =>{
+    console.log(`${data.TIMESTAMP} ${data.SYMBOL}`)
     let insert = await db.collection(data.SYMBOL).insertOne(data)
+    priceNotifier.startEmitting(data.SYMBOL,data.CLOSE,data.PREVCLOSE)
     if(!insert.acknowledged){
         console.log(`Insert failed ${data.SYMBOL}`)
     }
@@ -140,13 +188,7 @@ exports.getData = async(req,res) => {
             return res.status(400).send({status:ResCode.failure,msg:"Symbol is required"})
         }
 
-        let data = (await db.collections()).map((e)=>{
-            return e.namespace.split(".")[1]
-        }).filter((e)=>{
-            return e==req.params.symbol
-        })
-
-        if(data.length<=0){
+        if(!await this.hasSymbol(req.params.symbol)){
             return res.status(400).send({status:ResCode.failure,msg:"symbol does not exsist"})
         }
 
@@ -211,7 +253,7 @@ exports.Bites = async(req,res) => {
     }
 }
 
-exports.getHighlights = async(date)=>{
+exports.getHighlights = async(date,tries = 0)=>{
     try{
         const file = fs.createWriteStream("./highlights.csv")
         let url = `https://www1.nseindia.com/archives/equities/mkt/MA${date}.csv`
@@ -240,6 +282,23 @@ exports.getHighlights = async(date)=>{
         })
         let highLightsPath = "./highlights.csv/"
         if(!checker){
+
+            if(tries == Number(process.env.MAX_RETRIES)){
+                // send mail to admin here
+                await transporter.sendMail(
+                    {
+                        to: process.env.ADMIN_MAIL,
+                        from: "experimental.vilas@gmail.com",
+                        text: "unable to insert todays data "+ new Date().toString(),
+                        subject: "Unable to Scrape Data getHighLights" 
+                    }
+                )
+            }
+
+            if(tries < Number(process.env.MAX_RETRIES)){
+                await puppeteer.main(url)
+                this.getHighlights(date, tries += 1)
+            }
             return
         }
 
@@ -301,7 +360,7 @@ exports.getHighlights = async(date)=>{
 
                     Top_5_losers.push(raw)
                 }
-                console.log(data)
+                
             })
             .on("end",()=>{
 
@@ -327,6 +386,16 @@ exports.getHighlights = async(date)=>{
 
 
     }catch(err){
+        await transporter.sendMail(
+                {
+                    to: process.env.ADMIN_MAIL,
+                    from: "experimental.vilas@gmail.com",
+                    text: `Error inside getHighlights ${JSON.stringify(err)} ${new Date().toString()}`,
+                    subject: "error inside gethighlights" 
+                }
+            ).catch((err)=>{
+                console.log(err)
+            })
         console.log(err)
         return {status:ResCode.failure,msg:"Something Went Wrong at server"}
     }
@@ -367,6 +436,16 @@ exports.GetHighlights = async(req,res)=>{
 
 exports.CreatePriceAlert = async(req,res)=>{
     try{
+        if(!req.body.email){
+            return {status:ResCode.failure,msg:"Please Verify your email"}    
+        }else{
+            let is_mail_verified = await db.collection("EMAILS").findOne({EMAIL: req.body.email, VERIFIED: true})
+            if(!is_mail_verified){
+                return {status:ResCode.failure,msg:"Please Verify your email"}
+            }
+        }
+
+
         let latest_price = null
         let date = new Date(new Date().toDateString())
         while(!latest_price){
@@ -374,27 +453,19 @@ exports.CreatePriceAlert = async(req,res)=>{
             latest_price = await db.collection(req.body.symbol).findOne({"TIMESTAMP": date_string})
             date.setDate(date.getDate()-1)
         }
-        
-        if(latest_price.CLOSE>=Number(req.body.price) && req.body.type=="EQOAB"){
-            return res.status(400).send({status:ResCode.failure,msg:"price has to greater than current stock price"})
-        }
-
-        if(latest_price.CLOSE<=Number(req.body.price) && req.body.type=="EQOBL"){
-            return res.status(400).send({status:ResCode.failure,msg:"price has to Lower than current stock price"})
-        }
 
         let data = {
-            PRICE: Number(Number(req.body.price).toFixed(1)),
+            _id: new ObjectId(),
+            PRICE: Number(Number(req.body.price).toFixed(process.env.PRICE_PRECISION)),
             SYMBOL: req.body.symbol,
-            TYPE: req.body.type,
-            TIMESTAMP: new Date().toDateString(),
-            COMPLETED: false
+            TIMESTAMP: new Date(),
+            COMPLETED: false,
+            MAILTO: req.body.email
         }
 
         await db.collection("PriceAlerts").insertOne(data)
-
-        priceNotifier.startListen(data.SYMBOL,data.PRICE.toString(),()=>{
-            console.log("triggered")
+        priceNotifier.startListen(data.SYMBOL,data.PRICE.toFixed(process.env.PRICE_PRECISION),()=>{
+            PriceAlertQueue.push(data._id.toString())
         })
 
         return res.status(200).send({status:ResCode.success,msg:"Alert set successfully. You'll receive a email when price your target price"})
@@ -402,5 +473,86 @@ exports.CreatePriceAlert = async(req,res)=>{
     }catch(err){
         console.log(err)
         return {status:ResCode.failure,msg:"Something Went Wrong at server"}
+    }
+}
+
+exports.GetCalenderData = async(req,res) =>{
+    try{
+        let date = new Date(req.body.date)
+        date.setDate(1)
+        let maxDate = new Date(date)
+        maxDate.setMonth(date.getMonth()+1)
+        let symbol = req.body.symbol
+        if(!await this.hasSymbol(symbol)){
+            return res.status(400).send({status:ResCode.failure,msg:"symbol does not exsist"})
+        }
+
+        let data = await db.collection(symbol).find({$and:[{TIMESTAMP:{$gte: date}},{TIMESTAMP:{$lt:maxDate}}]},{sort:{TIMESTAMP:1}}).toArray()
+
+        return res.status(200).send({status: ResCode.success,msg:"success",data:data})
+
+    }catch(err){
+        console.log(err)
+        return {status:ResCode.failure,msg:"Something Went Wrong at server"}
+    }
+}
+
+exports.SendVerificationMail = async(req,res) => {
+    try{
+        if(!req.body.email){
+            return res.status(400).send({status: ResCode.failure, msg: "email is required"})
+        }
+        req.body.email = req.body.email.toLowerCase()
+        let emailregex = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/
+
+        if(!emailregex.test(req.body.email)){
+            return res.status(400).send({status: ResCode.failure, msg: "invalid email id"})
+        }
+
+        let otp =
+            Array(6)
+                .fill(1)
+                .map(() => {
+                return Math.floor(Math.random() * 9 + 1);
+                })
+                .join("")
+
+        let data = {
+            OTP: otp,
+            EMAIL: req.body.email
+        }
+
+        await transporter.sendMail(
+            {
+                from: 'experimental.vilas@gmail.com',
+                to: req.body.email,
+                subject: "EMAIL Verification. Bhav Copy",
+                text: "Your otp to verify at Bhav Copy is " + otp
+            }
+        )
+
+        await db.collection("EMAILS").insertOne(data)
+
+        return res.status(200).send({status: ResCode.success, msg: "OTP sent successfully"})
+
+    }catch(err){
+        console.log(err)
+        return res.status(200).send({status: ResCode.success, msg: "Failed to send otp"})
+    }
+}
+
+exports.VerifyOtp = async(req,res) => {
+    try{
+        let otp = await db.collection("EMAILS").findOneAndUpdate({EMAIL: req.body.email, OTP: req.body.otp},{$set:{VERIFIED: true}})
+
+        if(otp){
+            return res.status(200).send({status: ResCode.success, msg: "otp verified successfully"})
+        }
+
+        return res.status(400).send({status: ResCode.failure, msg: "incorrect otp"})
+
+    }catch(err){
+        console.log(err)
+        return res.status(400).send({status: ResCode.failure, msg: "unable to verify otp currently. please try after sometime"})
     }
 }

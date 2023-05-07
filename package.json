@@ -12,6 +12,8 @@
   "license": "ISC",
   "dependencies": {
     "async": "^3.2.4",
+    "chart.js": "^3.9.1",
+    "chartjs-node-canvas": "^4.1.6",
     "cors": "^2.8.5",
     "cron": "^2.2.0",
     "csv-parser": "^3.0.0",
@@ -21,7 +23,8 @@
     "mongodb": "4.13",
     "nodemailer": "^6.9.1",
     "nse_holidays": "^1.0.3",
-    "pug": "^3.0.2"
+    "pug": "^3.0.2",
+    "puppeteer": "^19.11.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.20"
