@@ -34,8 +34,18 @@ async function CreateImage(id){
 }
 
 async function getStockData(alert){
-    let data = await db.collection(alert.SYMBOL).find({$and:[{TIMESTAMP:{$gte: alert.TIMESTAMP}},{TIMESTAMP:{$lte: new Date()}}]}).toArray()
+    let getDuration = GetDuration(alert)
+    let data = await db.collection(alert.SYMBOL).find({$and:[{TIMESTAMP:{$gte: getDuration}},{TIMESTAMP:{$lte: new Date()}}]},{sort:{"TIMESTAMP":1}}).toArray()
     return data
+}
+
+function GetDuration(alert){
+    let timeGap = (Date.now() - Date.parse(alert.TIMESTAMP)) / 86400000
+    let duration = alert.TIMESTAMP 
+    if(timeGap < parseInt(process.env.PRICE_ALERT_CHART_DURATION)){
+        duration = new Date(Date.parse(alert.TIMESTAMP) - ((parseInt(process.env.PRICE_ALERT_CHART_DURATION) - timeGap)*86400000))
+    }
+    return duration
 }
 
 async function getAlert(id){

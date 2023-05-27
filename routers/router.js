@@ -6,8 +6,6 @@ router.get("/",AUTH.verify,(req,res)=>{
     res.send("request received")
 })
 
-router.post("/signup",signup)
-router.post("/login", login)
 
 router.get("/get-symbols",Bhav.getAllSymbols)
 router.get("/get-data/:symbol",Bhav.getData)
