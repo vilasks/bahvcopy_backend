@@ -10,6 +10,7 @@ exports.verify = async(req,res,next) => {
     try{
         let cookie = req.headers['authorization'].split(" ")[1]
         let some = jwt.verify(cookie, process.env.JWT_SECRET)
+        req.body.USERNAME =  some.USERNAME
         next()
     }catch(err){
         console.log(err)

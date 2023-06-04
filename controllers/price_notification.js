@@ -10,6 +10,9 @@ const {transporter} = require("../mailer/mailer")
 async function PriceAlert(id,callback){
     try{
         let alert = await CreateImage(id)
+        if(alert?.DELETED || alert?.COMPLETED){
+            return
+        }
         await db.collection("PriceAlerts").updateOne({_id: new ObjectID(id)},{$set:{COMPLETED:true,COMPLETEDTIMESTAMP: new Date()}})
     }catch(err){
         console.log(err)

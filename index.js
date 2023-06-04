@@ -36,10 +36,10 @@ app.use((req,res,next)=>{
     res.setHeader("access-control-expose-headers", "authorization")
     next()
 })
+app.use(express.static("priceAlertImages"))
 app.use("/auth",auth)
 app.use("/",AUTH.verify,routes)
 
-app.use(express.static("priceAlertImages"))
 
 // setTimeout(async()=>{
 //     let today = Date.now()
@@ -58,7 +58,7 @@ app.use(express.static("priceAlertImages"))
 //     }
 // },3000)
 
-const job = new cron("00 41 16 * * *",async function(){
+const job = new cron("00 18 22 * * *",async function(){
     if(!await nse.isTodayHoliday()){
         console.log("inside holiday")
         let date = new Date()

@@ -165,14 +165,31 @@ exports.parseBhavCopy = async(data) => {
 
 }
 
-exports.getAllSymbols = async(req,res) => {
+exports.getSymbols = async(req,res) => {
     try{
 
         let collection = db.collection("Symbols")
         let data = []
-        let collections = await collection.find({},{projection:{SYMBOL: 1, NAME_OF_COMPANY: 1}}).forEach((e)=>{
-            data.push(e)
-        })
+
+        if(req.query.q){
+            let collections = await collection.aggregate([
+                {$match:{
+                    $or:[
+                        {'SYMBOL': new RegExp(`\\b${req.query.q}`,"i")},
+                        {"NAME_OF_COMAPNY": new RegExp(`\\b${req.query.q}`,"i")}
+                    ]
+                }},
+                {$project:{SYMBOL: 1, NAME_OF_COMAPNY: 1}},
+                {$limit: parseInt(process.env.PAGE_SIZE)}
+            ]).forEach((e)=>{
+                data.push(e)
+            })
+        }else{
+            let collections = await db.collection("users").findOne({_id: req.body.USERNAME})
+            data = collections.WATCHLIST    
+        }
+
+        
         
         return res.status(200).send({status:ResCode.success,data:data})
 
@@ -256,7 +273,7 @@ exports.Bites = async(req,res) => {
 exports.getHighlights = async(date,tries = 0)=>{
     try{
         const file = fs.createWriteStream("./highlights.csv")
-        let url = `https://www1.nseindia.com/archives/equities/mkt/MA${date}.csv`
+        let url = `https://archives.nseindia.com/archives/equities/mkt/MA${date}.csv`
 
         let checker = await new Promise((resolve,rejects)=>{
             https.get(url,{
@@ -436,13 +453,9 @@ exports.GetHighlights = async(req,res)=>{
 
 exports.CreatePriceAlert = async(req,res)=>{
     try{
-        if(!req.body.email){
-            return {status:ResCode.failure,msg:"Please Verify your email"}    
-        }else{
-            let is_mail_verified = await db.collection("EMAILS").findOne({EMAIL: req.body.email, VERIFIED: true})
-            if(!is_mail_verified){
-                return {status:ResCode.failure,msg:"Please Verify your email"}
-            }
+        let user = await db.collection("users").findOne({_id: req.body.USERNAME})
+        if(!user){
+            return res.status(400).send({status:ResCode.failure,msg:"Unauthorized"})    
         }
 
 
@@ -460,7 +473,8 @@ exports.CreatePriceAlert = async(req,res)=>{
             SYMBOL: req.body.symbol,
             TIMESTAMP: new Date(),
             COMPLETED: false,
-            MAILTO: req.body.email
+            MAILTO: user.EMAILID,
+            USERNAME: req.body.USERNAME
         }
 
         await db.collection("PriceAlerts").insertOne(data)
@@ -554,5 +568,108 @@ exports.VerifyOtp = async(req,res) => {
     }catch(err){
         console.log(err)
         return res.status(400).send({status: ResCode.failure, msg: "unable to verify otp currently. please try after sometime"})
+    }
+}
+
+
+exports.listAlerts = async(req,res) => {
+    try{
+        let alerts = await db.collection("PriceAlerts").find({USERNAME: req.body.USERNAME},{projection:{PRICE: 1, SYMBOL: 1, TIMESTAMP: 1, COMPLETED: 1, DELETED: 1}}).toArray()
+        return res.status(200).send({status: ResCode.success, msg: "success", data:alerts})
+    }catch(err){
+        console.log(err)
+        return res.status(400).send({status: ResCode.failure, msg: "unable to get price alerts. please try after sometime"})
+    }
+}
+
+exports.getUserDetails = async(req,res) => {
+    try{
+        let user = await db.collection("users").findOne({_id: req.body.USERNAME})
+        return res.status(200).send({status: ResCode.success, msg: "success", data:{USERNAME: user._id, EMAILID: user.EMAILID}})
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({status: ResCode.failure, msg: "error while getting user details. please try after sometime."})
+    }
+}
+
+exports.updatePreference = async(req,res) => {
+    try{
+        if(req.body.action == "get"){
+            let user = await db.collection("users").findOne({_id: req.body.USERNAME})
+            return res.status(200).send({status: ResCode.success, msg: "success", newsletter: user.NEWSLETTER})
+        }else if(req.body.action == "update"){
+            let user = await db.collection("users").findOne({_id: req.body.USERNAME})
+            let preference = !user.NEWSLETTER
+            await db.collection('users').updateOne({_id: req.body.USERNAME},{$set:{NEWSLETTER: preference}})
+            return res.status(200).send({status: ResCode.success, msg: 'success', newsletter: preference})
+        }
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({status: ResCode.failure, msg: "error while getting preference. please try after sometime"})
+    }
+}
+
+
+exports.deletePriceAlert = async(req,res) => {
+    try{
+        let alert = await db.collection("PriceAlerts").findOne({_id: ObjectId(req.body._id), DELETED: {$ne: true}, COMPLETED: {$ne: true}})
+        if(alert){
+            db.collection('PriceAlerts').updateOne({_id: ObjectId(req.body._id)},{$set:{DELETED: true}})
+            return res.status(200).send({status: ResCode.success, msg: "alert deleted successfully"})
+        }
+        return res.status(400).send({status: ResCode.failure, msg: "alert does not exsist or already deleted"})
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({status: ResCode.failure, msg: "error while getting preference. please try after sometime"})
+    }
+}
+
+
+exports.deleteAccount = async(req,res) => {
+    try{
+        let user = await db.collection("users").findOne({_id: req.body.USERNAME})
+        db.collection("deletedUsers").insertOne(user)
+        db.collection("users").deleteOne({_id: req.body.USERNAME})
+        return res.status(200).send({status: ResCode.success, msg: "account deleted successfully"})
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({status: ResCode.failure, msg: "unable to delete account. please try after sometime"})
+    }
+}
+
+exports.addToWatchList = async(req,res) => {
+    try{
+        let checkStock = await db.collection("Symbols").findOne({SYMBOL: req.body.symbol})
+        if(!checkStock){
+            return res.status(400).send({status: ResCode.failure, msg: "Symbol does not exsist"})
+        }
+        let stock = {
+            SYMBOL: checkStock.SYMBOL,
+            NAME_OF_COMAPNY: checkStock.NAME_OF_COMPANY
+        }
+        await db.collection("users").updateOne({_id: req.body.USERNAME},{$push:{"WATCHLIST": stock}})
+
+        return res.status(200).send({status: ResCode.success, msg: "added to watchlist"})
+
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({status: ResCode.failure, msg: "unable to delete account. please try after sometime"})
+    }
+}
+
+exports.removeFromWatchList = async(req,res) => {
+    try{
+        let checkStock = await db.collection("Symbols").findOne({SYMBOL: req.body.symbol})
+        if(!checkStock){
+            return res.status(400).send({status: ResCode.failure, msg: "Symbol does not exsist"})
+        }
+
+        await db.collection("users").updateOne({_id: req.body.USERNAME},{$pull:{"WATCHLIST": {"SYMBOL": req.body.symbol}}})
+
+        return res.status(200).send({status: ResCode.success, msg: "removed from watchlist"})
+
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({status: ResCode.failure, msg: "unable to remove stock from watchlist. please try after sometime"})
     }
 }

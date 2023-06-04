@@ -11,12 +11,12 @@ class User{
         
     }
 
-    async createUser(userName,emailId,Password){
-        if(await this.#checkEmailExists(emailId)){
+    async createUser(userName,emailId,Password,newsLetter=false){
+        if(await this.checkEmailExists(emailId)){
             return {success: false, msg: "A user exists with current EmailId. please use different EmailId"}
         }
 
-        if(await this.#checkUserNameExists(userName)){
+        if(await this.checkUserNameExists(userName)){
             return {success: false, msg: "User Name already taken. Please use different User Name"}
         }
 
@@ -24,7 +24,7 @@ class User{
         let hash = this.hashFunction.update(Password+salt).digest("hex")
 
         let token = jwt.sign({USERNAME: userName},process.env.JWT_SECRET,{expiresIn: "7d"})
-        let create = await this.#database.insertOne({_id: userName,EMAILID: emailId, HASH: hash, SALT: salt})
+        let create = await this.#database.insertOne({_id: userName,EMAILID: emailId, HASH: hash, SALT: salt, NEWSLETTER: newsLetter})
 
         if(create.acknowledged){
             return {success: true,msg: token}
@@ -34,7 +34,7 @@ class User{
 
     }
 
-    async #checkEmailExists(emailId){
+    async checkEmailExists(emailId){
         let email = await this.#database.findOne({EMAILID: emailId})
         if(email){
             return true
@@ -42,7 +42,7 @@ class User{
         return false
     }
 
-    async #checkUserNameExists(userName){
+    async checkUserNameExists(userName){
         let user = await this.#database.findOne({_id: userName})
         if(user){
             return true
@@ -163,7 +163,7 @@ async function verifyOtp(req,res){
 
         if(hash === getUser.OTP){
             let user = new User()
-            let create = await user.createUser(req.body.userName,req.body.emailId,req.body.password)
+            let create = await user.createUser(req.body.userName,req.body.emailId,req.body.password,req.body.newsletter)
             await db.collection("tmp_users").updateOne({_id: req.body.emailId},{$set: {VERIFIED: true}})
             return res.status(200).send({status: ResCode.success, msg: "Otp Verified Successfully"})
         }
@@ -175,6 +175,23 @@ async function verifyOtp(req,res){
     }
 }
 
+async function userNameAvailable(req,res){
+    try{
+        let user = new User()
+        if(await user.checkUserNameExists(req.body.userName)){
+            return res.status(200).send({status: ResCode.success, available: false, msg: "userName is already taken. Please use a different name"})
+        }
+        return res.status(200).send({status: ResCode.success, available: true, msg: "userName is available"})
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({status: ResCode.failure, msg: "Unable to check user name availability. Please try after sometime"})
+    }
+}
+
+
+
+
+
 module.exports = {
-    User, signup, login, getOtp, verifyOtp
+    User, signup, login, getOtp, verifyOtp, userNameAvailable
 }
