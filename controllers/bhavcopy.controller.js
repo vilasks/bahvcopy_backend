@@ -647,7 +647,7 @@ exports.addToWatchList = async(req,res) => {
             SYMBOL: checkStock.SYMBOL,
             NAME_OF_COMAPNY: checkStock.NAME_OF_COMPANY
         }
-        await db.collection("users").updateOne({_id: req.body.USERNAME},{$push:{"WATCHLIST": stock}})
+        await db.collection("users").updateOne({_id: req.body.USERNAME},{$addToSet:{"WATCHLIST": stock}})
 
         return res.status(200).send({status: ResCode.success, msg: "added to watchlist"})
 
