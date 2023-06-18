@@ -21,4 +21,5 @@ router.post('/delete-price-alert', Bhav.deletePriceAlert)
 router.delete('/delete-account',Bhav.deleteAccount)
 router.post('/add-to-watchlist', Bhav.addToWatchList)
 router.patch('/remove-from-watchlist', Bhav.removeFromWatchList)
+router.get("/min-max-timestamps/:symbol", Bhav.getMinMaxTimestamps)
 module.exports = router

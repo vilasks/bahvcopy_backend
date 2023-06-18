@@ -673,3 +673,21 @@ exports.removeFromWatchList = async(req,res) => {
         return res.status(500).send({status: ResCode.failure, msg: "unable to remove stock from watchlist. please try after sometime"})
     }
 }
+
+exports.getMinMaxTimestamps = async(req,res) => {
+    try{
+        let min_max = await db.collection(req.params.symbol).aggregate([ 
+            { "$group": { 
+                "_id": null,
+                "max": { "$max": "$TIMESTAMP" }, 
+                "min": { "$min": "$TIMESTAMP" } 
+            }}
+        ]).toArray()
+
+        return res.status(200).send({status: ResCode.success, success: true, msg: "success", data: min_max[0]})
+
+    }catch(err){
+        console.log(err)
+        return res.status(500).send({status: ResCode.failure, success: false, msg: "failure"})
+    }
+}
