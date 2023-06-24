@@ -58,7 +58,7 @@ app.use("/",AUTH.verify,routes)
 //     }
 // },3000)
 
-const job = new cron("00 18 22 * * *",async function(){
+const job = new cron("00 00 18 * * *",async function(){
     if(!await nse.isTodayHoliday()){
         console.log("inside holiday")
         let date = new Date()
@@ -73,7 +73,7 @@ const job = new cron("00 18 22 * * *",async function(){
     console.log("called")
 })
 
-const mailJob = new cron("00 00 19 * * *", function(){
+const mailJob = new cron("00 30 18 * * *", function(){
     console.log("called mailer")
     sendActivityMail.main()
 })

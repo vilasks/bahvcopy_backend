@@ -57,9 +57,9 @@ async function SendMail(to){
 }
 
 async function main(){
-    let users = await db.collection("USERS").find({MARKET_ACTIVITY_MAIL: true}).toArray()
+    let users = await db.collection("USERS").find({NEWSLETTER: true}).toArray()
     users.forEach((user)=>{
-        mailQueue.push(user.EMAIL)
+        mailQueue.push(user.EMAILID)
     })
 }
 
