@@ -13,6 +13,7 @@ require("./controllers/price_emitters")
 require("./controllers/price_notification")
 const puppeteer = require("./controllers/pupeteer.controller")
 const AUTH = require("./controllers/auth.controller")
+const userController = require("./controllers/user.controller")
 // app.get("/",(req,res)=>{
 //     const date = new Date()
 //     const file = fs.createWriteStream("bhav.zip")
@@ -40,24 +41,6 @@ app.use(express.static("priceAlertImages"))
 app.use("/auth",auth)
 app.use("/",AUTH.verify,routes)
 
-
-// setTimeout(async()=>{
-//     let today = Date.now()
-//     let past = 1673461800000
-//     while(past<today){
-//         let date = new Date(past)
-//         if(date.getDay()==0 || date.getDay()==6){
-//             console.log("Weekend")
-//         }else{
-//             date = date.toDateString().split(" ")
-//             date = date[2]+"-"+date[1].toUpperCase()+"-"+date[3]
-//             console.log(date)
-//             // await getTodaysData(date)
-//         }
-//         past+=86400000
-//     }
-// },3000)
-
 const job = new cron("00 00 18 * * *",async function(){
     if(!await nse.isTodayHoliday()){
         console.log("inside holiday")
@@ -78,13 +61,7 @@ const mailJob = new cron("00 30 18 * * *", function(){
     sendActivityMail.main()
 })
 
-// setTimeout(async()=>{
-//     let highLightsDate = new Date().toJSON().split("T")[0].split("-").reverse()
-//     let highLightsYear  = highLightsDate.at(-1).slice(2)
-//     highLightsDate = highLightsDate[0]+highLightsDate[1]+highLightsYear
-//     let some = await getHighlights("100223") 
-//     console.log("Done")
-// })
+const pingJob = new cron("*/5 * * * *", () => userController.Ping())
 
 app.listen(process.env.PORT,(err)=>{
     if(err){
@@ -93,4 +70,5 @@ app.listen(process.env.PORT,(err)=>{
     console.log(`Started listening on port ${process.env.PORT}`)
     job.start()
     mailJob.start()
+    pingJob.start()
 })

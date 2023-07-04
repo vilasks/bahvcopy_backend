@@ -4,6 +4,7 @@ const {ResCode} = require("../models/response.codes")
 const crypto = require("crypto")
 const jwt = require("jsonwebtoken")
 const { transporter } = require("../mailer/mailer")
+const axios = require("axios")
 class User{
     #database = db.collection("users")
     hashFunction = crypto.createHash("sha256")
@@ -188,10 +189,28 @@ async function userNameAvailable(req,res){
     }
 }
 
+async function PingResponse(req,res) {
+    try{
+        console.log(`Pinged from ${req.ip}`)
+        return res.status(200).send({status: ResCode.success, success: true, msg: "system online"})
+    }catch(e){
+        return res.status(200).send({status: ResCode.success, success: true, msg: "system online"})
+    }
+}
 
-
-
+async function Ping() {
+    try{
+        let server = process.env.PING_SERVERS.split(",")
+        server.forEach(async(ele)=>{
+            let ping = await axios.get(ele).catch((err)=>{
+                console.log(err.response.status)
+            })
+        })
+    }catch(e){
+        console.log(e)
+    }
+}
 
 module.exports = {
-    User, signup, login, getOtp, verifyOtp, userNameAvailable
+    User, signup, login, getOtp, verifyOtp, userNameAvailable, Ping, PingResponse
 }
