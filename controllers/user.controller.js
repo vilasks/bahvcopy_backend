@@ -191,7 +191,6 @@ async function userNameAvailable(req,res){
 
 async function PingResponse(req,res) {
     try{
-        console.log(`Pinged from ${req.ip}`)
         return res.status(200).send({status: ResCode.success, success: true, msg: "system online"})
     }catch(e){
         return res.status(200).send({status: ResCode.success, success: true, msg: "system online"})

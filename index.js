@@ -41,7 +41,7 @@ app.use(express.static("priceAlertImages"))
 app.use("/auth",auth)
 app.use("/",AUTH.verify,routes)
 
-const job = new cron("00 00 18 * * *",async function(){
+const job = new cron("00 50 21 * * *",async function(){
     if(!await nse.isTodayHoliday()){
         console.log("inside holiday")
         let date = new Date()
@@ -54,12 +54,12 @@ const job = new cron("00 00 18 * * *",async function(){
         getHighlights(highLightsDate)
     }
     console.log("called")
-})
+},null,true,"Asia/Kolkata")
 
-const mailJob = new cron("00 30 18 * * *", function(){
+const mailJob = new cron("00 52 21 * * *", function(){
     console.log("called mailer")
-    sendActivityMail.main()
-})
+    // sendActivityMail.main()
+},null,true,"Asia/Kolkata")
 
 const pingJob = new cron("*/5 * * * *", () => userController.Ping())
 
