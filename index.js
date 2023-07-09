@@ -56,9 +56,11 @@ const job = new cron("00 00 18 * * *",async function(){
     console.log("called")
 },null,true,"Asia/Kolkata")
 
-const mailJob = new cron("00 30 18 * * *", function(){
+const mailJob = new cron("00 30 18 * * *", async function(){
     console.log("called mailer")
-    sendActivityMail.main()
+    if(!await nse.isTodayHoliday()){
+        sendActivityMail.main()
+    }
 },null,true,"Asia/Kolkata")
 
 const pingJob = new cron("*/5 * * * *", () => userController.Ping())
