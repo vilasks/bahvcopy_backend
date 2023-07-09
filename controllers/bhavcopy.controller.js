@@ -10,7 +10,7 @@ const { PriceAlertQueue} = require("./price_notification")
 const { ObjectId } = require("mongodb")
 const puppeteer = require("./pupeteer.controller")
 const {transporter} = require("../mailer/mailer")
-
+const wantedStocks = require("./stocks")
 const bitesFrame = [
     {label:"52Weeks",timeFrame:86400000*365},
     {label:"4Weeks",timeFrame:86400000*30},
@@ -124,11 +124,13 @@ exports.getTodaysData = async(date,tries=0) => {
 }
 
 exports.insertIntoDb = async(data) =>{
-    console.log(`${data.TIMESTAMP} ${data.SYMBOL}`)
-    let insert = await db.collection(data.SYMBOL).insertOne(data)
-    priceNotifier.startEmitting(data.SYMBOL,data.CLOSE,data.PREVCLOSE)
-    if(!insert.acknowledged){
-        console.log(`Insert failed ${data.SYMBOL}`)
+    if(wantedStocks.stocks.find((ele)=> ele == data.SYMBOL) != undefined){
+        console.log(`${data.TIMESTAMP} ${data.SYMBOL}`)
+        let insert = await db.collection(data.SYMBOL).insertOne(data)
+        priceNotifier.startEmitting(data.SYMBOL,data.CLOSE,data.PREVCLOSE)
+        if(!insert.acknowledged){
+            console.log(`Insert failed ${data.SYMBOL}`)
+        }
     }
 }
 
