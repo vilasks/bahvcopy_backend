@@ -41,7 +41,9 @@ app.use(express.static("priceAlertImages"))
 app.use("/auth",auth)
 app.use("/",AUTH.verify,routes)
 
-const job = new cron("00 00 18 * * *",async function(){
+const job = new cron("00 15 15 * * *",async function(){
+    console.log(await nse.isTodayHoliday())
+    return
     if(!await nse.isTodayHoliday()){
         console.log("inside holiday")
         let date = new Date()
