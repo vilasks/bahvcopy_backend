@@ -299,7 +299,7 @@ exports.getHighlights = async(date,tries = 0)=>{
                 })
             })
         })
-        let highLightsPath = "./highlights.csv/"
+        let highLightsPath = "./highlights.csv"
         if(!checker){
 
             if(tries == Number(process.env.MAX_RETRIES)){
