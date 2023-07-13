@@ -41,10 +41,9 @@ app.use(express.static("priceAlertImages"))
 app.use("/auth",auth)
 app.use("/",AUTH.verify,routes)
 
-const job = new cron("00 30 15 * * *",async function(){
-    console.log(await nse.isTodayHoliday())
-    return
-    if(!await nse.isTodayHoliday()){
+const job = new cron("00 00 18 * * *",async function(){
+    let check_day = await nse.isTodayHoliday()
+    if(!check_day.isHoliday){
         console.log("inside holiday")
         let date = new Date()
         date = date.toDateString().split(" ")
@@ -60,7 +59,8 @@ const job = new cron("00 30 15 * * *",async function(){
 
 const mailJob = new cron("00 30 18 * * *", async function(){
     console.log("called mailer")
-    if(!await nse.isTodayHoliday()){
+    let check_day = await nse.isTodayHoliday()
+    if(!check_day.isHoliday){
         sendActivityMail.main()
     }
 },null,true,"Asia/Kolkata")
