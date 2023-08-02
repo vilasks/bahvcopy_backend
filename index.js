@@ -74,5 +74,5 @@ app.listen(process.env.PORT,(err)=>{
     console.log(`Started listening on port ${process.env.PORT}`)
     job.start()
     mailJob.start()
-    pingJob.start()
+    // pingJob.start()
 })
